@@ -16,7 +16,15 @@ class FeatureTypeDetector:
                                                                  'excellent']
     @staticmethod
     def is_numeric_like(series):
-        """Check if all values in a series are numeric-like (e.g., '1', '2', '3')."""
+        """
+        Determine if all values in a series are numeric-like.
+
+        Parameters:
+        - series (pd.Series): The series to evaluate.
+
+        Returns:
+        - bool: True if all values can be converted to float, otherwise False.
+        """
         try:
             series.astype(float)
             return True
@@ -24,7 +32,18 @@ class FeatureTypeDetector:
             return False
 
     def contains_ordinal_keywords(self, series):
-        """Check if a series contains known ordinal keywords."""
+        """
+        Check if a series contains known ordinal keywords.
+
+        This method uses a regular expression to search for any of the keywords in the series.
+        The search is case-insensitive.
+
+        Parameters:
+        - series (pd.Series): The series to search.
+
+        Returns:
+        - bool: True if any of the keywords are found, False otherwise.
+        """
         pattern = '|'.join(self.known_ordinal_keywords)
         return any(re.search(pattern, str(value).lower()) for value in series.unique())
 

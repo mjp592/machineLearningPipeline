@@ -14,7 +14,7 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
                  ordinal_order, non_negative_features, outlier_threshold=3,
                  skew_threshold=0.5, missing_threshold=0.1, balance_method=None):
         """
-        Initializes the data preprocessor with options for cleaning, transformation, and balancing.
+        Initializes the preprocessor which cleans, transforms, normalize, encodes and balances the dataset.
 
         Parameters:
         - continuous_features (list): List of continuous feature names.
@@ -22,8 +22,10 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         - binary_features (list): List of binary feature names.
         - ordinal_features (list): List of ordinal feature names.
         - ordinal_order (list): List of order values for ordinal features.
+        - non_negative_features (list): List of features that should not have negative values.
         - outlier_threshold (float): Z-score threshold for outlier detection.
         - skew_threshold (float): Skewness threshold for log transformation.
+        - missing_threshold (float): Missing Data Percentage threshold (between 0 and 1) for dropping columns.
         - balance_method (str): Method for class balancing, 'oversample' for SMOTE, 'undersample' for random undersampling.
         """
         self.continuous_features = continuous_features
@@ -44,7 +46,6 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
 
         Parameters:
         - df (pd.DataFrame): Input DataFrame.
-        - missing_threshold (float): Percentage threshold (between 0 and 1) for dropping columns.
 
         Returns:
         - pd.DataFrame: DataFrame with columns dropped based on the missing threshold.
@@ -90,7 +91,13 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
 
     def detect_and_remove_errors(self, x):
         """
-        Detect and remove data errors such as outliers, invalid entries, and data type mismatches.
+        Detect and remove outliers, invalid entries, enforce data types, and remove sparse features in given DataFrame.
+
+        Parameters:
+        - x (pd.DataFrame): DataFrame to clean.
+
+        Returns:
+        - x_cleaned (pd.DataFrame): Cleaned DataFrame.
         """
         x_cleaned = x.copy()
 
@@ -120,6 +127,12 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
     def apply_log_transformation(self, x):
         """
         Apply log transformation to skewed continuous features based on skew_threshold.
+
+        Parameters:
+        - x (pd.DataFrame): DataFrame to transform.
+
+        Returns:
+        - x_transformed (pd.DataFrame): DataFrame with natural log transformed continuous features where applicable.
         """
         x_transformed = x.copy()
 
@@ -133,7 +146,16 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         return x_transformed
 
     def build_preprocessing_pipeline(self):
-        # Pipelines for different types of data with missing indicators
+        """
+        Build a preprocessing pipeline for different feature types.
+
+        This method constructs pipelines for continuous, categorical, binary, and ordinal features,
+        applying appropriate transformations such as imputation, scaling, encoding, etc.
+
+        Returns:
+        - preprocessor (ColumnTransformer): A ColumnTransformer object that applies the specified
+                                             transformations to each feature type.
+        """
         continuous_pipeline = Pipeline([
             ('imputer', SimpleImputer(strategy='median', add_indicator=False)),
             ('scaler', StandardScaler())
@@ -151,11 +173,10 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         ordinal_pipeline = Pipeline([
             ('imputer', SimpleImputer(strategy='most_frequent', add_indicator=False)),
             ('encoder', OrdinalEncoder(categories=[self.ordinal_order],
-                                               handle_unknown='use_encoded_value',
-                                               unknown_value=np.nan))
+                                       handle_unknown='use_encoded_value',
+                                       unknown_value=np.nan))
         ])
 
-        # Combine pipelines
         preprocessor = ColumnTransformer([
             ('continuous', continuous_pipeline, self.continuous_features),
             ('categorical', categorical_pipeline, self.categorical_features),
@@ -168,6 +189,14 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
     def balance_classes(self, x, y):
         """
         Balance classes in the target variable using specified method (oversample or undersample).
+
+        Parameters:
+        - x (pd.DataFrame): Features of the dataset.
+        - y (pd.Series): Target labels of the dataset.
+
+        Returns:
+        - x_balanced (pd.DataFrame): Balanced features of the dataset.
+        - y_balanced (pd.Series): Balanced target labels of the dataset.
         """
         if self.balance_method == 'oversample':
             smote = SMOTE(random_state=42)
@@ -181,6 +210,15 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         return x_balanced, y_balanced
 
     def fit(self, x):
+        """
+        Clean data, apply log transformation, then build and fit the preprocessing pipeline.
+
+        Parameters:
+        - x (pd.DataFrame): Features of the dataset.
+
+        Returns:
+        - self (DataPreprocessor): Fitted DataPreprocessor instance.
+        """
         # Clean data, apply log transformation, then build + fit the preprocessing pipeline
         x_cleaned = self.detect_and_remove_errors(x)
         x_transformed = self.apply_log_transformation(x_cleaned)
@@ -190,6 +228,18 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, x, y=None):
+        """
+        Clean data, apply log transformation, then transform with the fitted pipeline.
+        Balance classes after transformations, if balance method is specified and y is provided.
+
+        Parameters:
+        - x (pd.DataFrame): Features of the dataset.
+        - y (pd.Series): Optional target labels of the dataset.
+
+        Returns:
+        - (pd.DataFrame, pd.Series): Balanced features of the dataset and target labels if y is provided,
+                                     otherwise just the balanced features.
+        """
         # Clean data, apply log transformation, then transform with the fitted pipeline
         x_cleaned = self.detect_and_remove_errors(x)
         x_transformed = self.apply_log_transformation(x_cleaned)
