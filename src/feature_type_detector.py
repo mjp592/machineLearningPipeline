@@ -3,7 +3,7 @@ import re
 
 
 class FeatureTypeDetector:
-    def __init__(self, ordinal_threshold=10, known_ordinal_keywords=None):
+    def __init__(self, ordinal_threshold=5, known_ordinal_keywords=None):
         """
         Initialize the feature type detector with additional ordinal detection options.
 
@@ -14,8 +14,8 @@ class FeatureTypeDetector:
         self.ordinal_threshold = ordinal_threshold
         self.known_ordinal_keywords = known_ordinal_keywords or ['low', 'medium', 'high', 'poor', 'fair', 'good',
                                                                  'excellent']
-
-    def is_numeric_like(self, series):
+    @staticmethod
+    def is_numeric_like(series):
         """Check if all values in a series are numeric-like (e.g., '1', '2', '3')."""
         try:
             series.astype(float)
@@ -58,7 +58,7 @@ class FeatureTypeDetector:
                 feature_types['continuous'].append(col)
 
             # Detect ordinal features (numeric-like or contains ordinal keywords)
-            elif (self.is_numeric_like(df[col]) or self.contains_ordinal_keywords(
+            elif (self.is_numeric_like(series=df[col]) or self.contains_ordinal_keywords(
                     df[col])) and unique_values <= self.ordinal_threshold:
                 feature_types['ordinal'].append(col)
 
