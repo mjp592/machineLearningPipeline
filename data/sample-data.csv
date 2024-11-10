@@ -1,0 +1,11 @@
+﻿binary_feature,continuous_feature,ordinal_feature,categorical_feature,target
+0,23.5,low,A,0
+1,45.6,medium,B,1
+1,35.2,medium,A,0
+0,55.1,high,C,1
+1,29.8,low,B,0
+0,40.3,medium,A,1
+0,51.4,low,C,0
+1,28.5,high,B,1
+1,36.9,medium,C,0
+0,42.1,low,A,1
