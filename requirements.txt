@@ -1,17 +1,17 @@
 # Core Libraries
-numpy==1.21.6
-pandas==1.3.5
-scikit-learn==0.24.2
-joblib==1.0.1
+numpy==1.23.5
+pandas==1.5.3
+scikit-learn==1.2.2
+joblib==1.2.0
 
 # Data Preprocessing for Imbalanced Datasets
-imbalanced-learn==0.8.1
+imbalanced-learn==0.10.1
 
 # Hyperparameter Optimization Libraries
-scikit-optimize==0.9.0     # For Bayesian Optimization (BayesSearchCV)
-tpot==0.11.7               # For Genetic Algorithm-based Optimization
-tune-sklearn==0.4.4        # For Hyperband and advanced search with Ray
-optuna==2.10.0             # For Optuna Optimization
+scikit-optimize==0.9.0      # Latest stable release (not frequently updated)
+tpot==0.11.7                # Latest stable release (not frequently updated)
+tune-sklearn==0.4.5         # For Hyperband and advanced search with Ray
+optuna==3.1.0               # Latest stable release
 
 # Metrics and Evaluation
-scipy==1.7.3
+scipy==1.10.1
