@@ -1,9 +1,8 @@
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_val_score
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from joblib import dump
 from skopt import BayesSearchCV
 from tpot import TPOTClassifier
-from tune_sklearn import TuneSearchCV
 import optuna
 import numpy as np
 
@@ -17,8 +16,8 @@ class ModelTrainer:
         Parameters:
         - model: The model to train (any classifier, e.g., RandomForestClassifier, SVC).
         - param_grid (dict): Parameter grid for hyperparameter tuning.
-        - search_type (str): Tuning strategy ('grid', 'random', 'bayesian', 'hyperband', 'genetic', 'optuna').
-        - scoring (str): Scoring metric to optimize during tuning (e.g., 'accuracy', 'f1').
+        - search_type (str): Tuning strategy ('grid', 'random', 'bayesian', 'genetic', 'optuna').
+        - scoring (str): Scoring metric to optimize during tuning (e.g., 'accuracy', 'f1', 'precision').
         - n_iter (int): Number of parameter settings sampled in RandomizedSearchCV or Bayesian search.
         - save_path (str): File path to save the trained model.
         """
@@ -30,18 +29,18 @@ class ModelTrainer:
         self.save_path = save_path
         self.best_model = None
 
-    def objective_optuna(self, trial, X_train, y_train):
+    def objective_optuna(self, trial, x_train, y_train):
         """Objective function for Optuna hyperparameter optimization."""
         # Sample parameters based on param_grid
         params = {key: trial.suggest_categorical(key, values) for key, values in self.param_grid.items()}
 
         # Set sampled parameters to model and fit
         model = self.model.set_params(**params)
-        score = cross_val_score(model, X_train, y_train, scoring=self.scoring, cv=5).mean()
+        score = cross_val_score(model, x_train, y_train, scoring=self.scoring, cv=5).mean()
 
         return score
 
-    def train(self, X_train, y_train):
+    def train(self, x_train, y_train):
         """
         Train the model with hyperparameter tuning and save the best model.
 
@@ -56,37 +55,37 @@ class ModelTrainer:
 
         # Select tuning strategy
         if self.search_type == 'grid':
-            search = GridSearchCV(self.model, self.param_grid, scoring=self.scoring, cv=5)
+            search = GridSearchCV(self.model, self.param_grid, scoring=self.scoring, n_jobs=10, cv=5)
 
         elif self.search_type == 'random':
-            search = RandomizedSearchCV(self.model, self.param_grid, n_iter=self.n_iter, scoring=self.scoring, cv=5)
+            search = RandomizedSearchCV(self.model, self.param_grid, n_iter=self.n_iter,
+                                        scoring=self.scoring, n_jobs=10, cv=5)
 
         elif self.search_type == 'bayesian':
-            search = BayesSearchCV(self.model, self.param_grid, n_iter=self.n_iter, scoring=self.scoring, cv=5)
-
-        elif self.search_type == 'hyperband':
-            search = TuneSearchCV(self.model, self.param_grid, n_trials=self.n_iter, scoring=self.scoring, cv=5)
+            search = BayesSearchCV(self.model, self.param_grid, n_iter=self.n_iter,
+                                   scoring=self.scoring, n_jobs=10, cv=5)
 
         elif self.search_type == 'genetic':
-            tpot = TPOTClassifier(generations=5, population_size=20, verbosity=2, scoring=self.scoring)
-            tpot.fit(X_train, y_train)
+            tpot = TPOTClassifier(generations=100, population_size=100, verbosity=2,
+                                  early_stop=10, n_jobs=10, scoring=self.scoring)
+            tpot.fit(x_train, y_train)
             self.best_model = tpot.fitted_pipeline_
             best_params = tpot.fitted_pipeline_.get_params()
 
         elif self.search_type == 'optuna':
             study = optuna.create_study(direction='maximize')
-            study.optimize(lambda trial: self.objective_optuna(trial, X_train, y_train), n_trials=self.n_iter)
+            study.optimize(lambda trial: self.objective_optuna(trial, x_train, y_train), n_trials=self.n_iter)
             best_params = study.best_params
             self.best_model = self.model.set_params(**best_params)
-            self.best_model.fit(X_train, y_train)
+            self.best_model.fit(x_train, y_train)
 
         else:
             raise ValueError(
-                "search_type must be one of 'grid', 'random', 'bayesian', 'hyperband', 'genetic', or 'optuna'.")
+                "search_type must be one of 'grid', 'random', 'bayesian', 'genetic', or 'optuna'.")
 
         # For search-based tuning strategies
-        if self.search_type in ['grid', 'random', 'bayesian', 'hyperband']:
-            search.fit(X_train, y_train)
+        if self.search_type in ['grid', 'random', 'bayesian']:
+            search.fit(x_train, y_train)
             self.best_model = search.best_estimator_
             best_params = search.best_params_
 

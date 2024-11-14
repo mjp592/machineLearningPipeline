@@ -6,7 +6,7 @@ import numpy as np
 
 
 class ModelEvaluator:
-    def __init__(self, average='weighted'):
+    def __init__(self, average='binary'):
         """
         Initialize the model evaluator with options for evaluation metrics.
 
@@ -16,7 +16,7 @@ class ModelEvaluator:
         """
         self.average = average
 
-    def evaluate(self, model, X_test, y_test):
+    def evaluate(self, model, x_test, y_test):
         """
         Evaluate the provided model on the test set using common metrics.
 
@@ -30,9 +30,9 @@ class ModelEvaluator:
                           confusion matrix, ROC AUC (for binary), Precision-Recall AUC, MCC, and classification report.
         """
         # Generate predictions and prediction probabilities (if supported by model)
-        predictions = model.predict(X_test)
+        predictions = model.predict(x_test)
         try:
-            probabilities = model.predict_proba(X_test)[:, 1]
+            probabilities = model.predict_proba(x_test)[:, 1]
         except AttributeError:
             probabilities = None
 
